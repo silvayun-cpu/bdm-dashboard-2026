@@ -101,11 +101,23 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 </style>
 </head>
 <body>
-<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div class="loading-text">Google Sheets에서 데이터를 불러오는 중...</div></div>
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Google Sheets에서 데이터를 불러오는 중...</div>
+</div>
 <div class="container">
   <div class="header fi">
-    <div class="header-left"><h1>2026 BDM <span>제휴 대시보드</span></h1><p>분기별 예상 라이브 매체사 및 H.impDAU 현황 · 담당자: silva / van</p></div>
-    <div class="header-right"><div class="last-updated" id="lastUpdated"></div><div class="target-badge"><div class="label">26년 파트 타겟</div><div class="val">240,000</div></div></div>
+    <div class="header-left">
+      <h1>2026 BDM <span>제휴 대시보드</span></h1>
+      <p>분기별 예상 라이브 매체사 및 H.impDAU 현황 · 담당자: silva / van</p>
+    </div>
+    <div class="header-right">
+      <div class="last-updated" id="lastUpdated"></div>
+      <div class="target-badge">
+        <div class="label">26년 파트 타겟</div>
+        <div class="val">240,000</div>
+      </div>
+    </div>
   </div>
   <div class="error-banner" id="errorBanner">⚠️ 데이터를 불러오지 못했습니다. 잠시 후 새로고침해주세요.</div>
   <div class="summary-grid">
@@ -129,54 +141,229 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
   <div class="gun-grid fi d5" id="gunGrid"></div>
   <div class="panel full-width fi d6">
     <div class="panel-title"><span></span>전체 예상 라이브 매체사 목록</div>
-    <table class="data-table"><thead><tr><th>분기</th><th>담당자</th><th>군</th><th>매체사</th><th>조정 H.impDAU</th><th>비중</th></tr></thead><tbody id="tableBody"></tbody></table>
+    <table class="data-table">
+      <thead><tr><th>분기</th><th>담당자</th><th>군</th><th>매체사</th><th>조정 H.impDAU</th><th>비중</th></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
   </div>
 </div>
 <script>
-const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbwd2cxxF4nSaDH1vhzz6bHMiafqVjYbErfK_E3ZZ3feqp3OO5MGvvflxxXEWVQ7C4t0/exec';
-const TARGET=240000;
-const GUN_CONFIG={'A군':{color:'#059669',target:150000},'B군':{color:'#3b82f6',target:40000},'C군':{color:'#d97706',target:40000},'D군':{color:'#dc2626',target:10000},'침투군':{color:'#7c3aed',target:null}};
-let chartC=null,chartM=null;
-function fmt(n){return Number(n).toLocaleString();}
-async function loadData(){try{const r=await fetch(APPS_SCRIPT_URL);const j=await r.json();if(!j.success)throw new Error(j.error);return j;}catch(e){console.error(e);return null;}}
-function parseRows(raw){const rows=[];for(const r of raw){const app=r['앱명(전체)']||r['앱명']||'';const status=r['상태']||'';const adjDAU=parseFloat(r['조정 H.impDAU']||0);const rawDAU=parseFloat(r['앱 DAU']||0);const dau = Math.round(adjDAU || rawDAU);const mgr=(r['담당자']||'').toLowerCase().trim();const gun=r['군']||'';if(!app||!dau)continue;const m=status.match(/(\d+)Q/);if(!m)continue;rows.push({app,quarter:m[1]+'Q',mgr,gun,dau});}return rows;}
-function renderAll(rows){
-const total=rows.reduce((a,b)=>a+b.dau,0);
-const sr=rows.filter(r=>r.mgr==='silva');const vr=rows.filter(r=>r.mgr==='van');
-document.getElementById('totalDAU').textContent=fmt(total);
-document.getElementById('totalSub').textContent=rows.length+'개 매체사';
-document.getElementById('silvaTotalDAU').textContent=fmt(sr.reduce((a,b)=>a+b.dau,0));
-document.getElementById('silvaSub').textContent=sr.length+'개 매체사';
-document.getElementById('vanTotalDAU').textContent=fmt(vr.reduce((a,b)=>a+b.dau,0));
-document.getElementById('vanSub').textContent=vr.length+'개 매체사';
-document.getElementById('achieveRate').textContent=total>0?(total/TARGET*100).toFixed(0)+'%':'—';
-const qs=['1Q','2Q','3Q','4Q'];const qc={'1Q':'#059669','2Q':'#3b82f6','3Q':'#d97706','4Q':'#dc2626'};
-const mx=Math.max(...rows.map(r=>r.dau),1);
-document.getElementById('quarterGrid').innerHTML=qs.map(q=>{
-const qr=rows.filter(r=>r.quarter===q);const qt=qr.reduce((a,b)=>a+b.dau,0);
-const sa=qr.filter(r=>r.mgr==='silva').sort((a,b)=>b.dau-a.dau);
-const va=qr.filter(r=>r.mgr==='van').sort((a,b)=>b.dau-a.dau);
-const mk=(arr,cls)=>!arr.length?'<div class="no-data">예정 없음</div>':arr.map(r=>'<div class="company-item"><div><div class="company-name">'+r.app+'</div><div class="dau-bar"><div class="dau-bar-fill" style="--bar-color:var(--'+cls+');width:'+Math.max(2,r.dau/mx*100).toFixed(0)+'%"></div></div></div><div class="company-dau">'+fmt(r.dau)+'</div></div>').join('');
-return '<div class="quarter-col"><div class="quarter-header"><div class="qname" style="color:'+qc[q]+'">26' '+q+'</div><div class="qtotal">합계: '+fmt(qt)+'</div></div><div class="quarter-body"><div class="manager-section"><div class="manager-label silva">silva</div>'+mk(sa,'silva')+'</div><div class="manager-section"><div class="manager-label van">van</div>'+mk(va,'van')+'</div></div></div>';
-}).join('');
-const qt=qs.map(q=>rows.filter(r=>r.quarter===q).reduce((a,b)=>a+b.dau,0));
-const cu=qt.reduce((acc,v,i)=>{acc.push((acc[i-1]||0)+v);return acc;},[]);
-const sp=qs.map(q=>rows.filter(r=>r.quarter===q&&r.mgr==='silva').reduce((a,b)=>a+b.dau,0));
-const vp=qs.map(q=>rows.filter(r=>r.quarter===q&&r.mgr==='van').reduce((a,b)=>a+b.dau,0));
-const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#475569',font:{size:11},boxWidth:12}},tooltip:{backgroundColor:'#fff',borderColor:'#e2e8f0',borderWidth:1,titleColor:'#0f172a',bodyColor:'#64748b',callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},scales:{x:{grid:{color:'#f1f5f9'},ticks:{color:'#94a3b8'}},y:{grid:{color:'#f1f5f9'},ticks:{color:'#94a3b8',callback:v=>fmt(v)}}}};
-if(chartC)chartC.destroy();
-chartC=new Chart(document.getElementById('cumulativeChart').getContext('2d'),{type:'bar',data:{labels:qs,datasets:[{label:'분기 신규',data:qt,backgroundColor:['rgba(5,150,105,0.5)','rgba(59,130,246,0.5)','rgba(217,119,6,0.4)','rgba(220,38,38,0.5)'],borderColor:['#059669','#3b82f6','#d97706','#dc2626'],borderWidth:1.5,borderRadius:6,order:2},{label:'누적 H.impDAU',data:cu,type:'line',borderColor:'#059669',backgroundColor:'rgba(5,150,105,0.06)',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#059669',fill:true,tension:0.3,order:1},{label:'타겟 ('+fmt(TARGET)+')',data:[TARGET,TARGET,TARGET,TARGET],type:'line',borderColor:'rgba(220,38,38,0.6)',borderDash:[6,4],borderWidth:2,pointRadius:0,fill:false,order:0}]},options:opts});
-if(chartM)chartM.destroy();
-chartM=new Chart(document.getElementById('managerChart').getContext('2d'),{type:'bar',data:{labels:qs,datasets:[{label:'silva',data:sp,backgroundColor:'rgba(124,58,237,0.5)',borderColor:'#7c3aed',borderWidth:1.5,borderRadius:6},{label:'van',data:vp,backgroundColor:'rgba(217,119,6,0.5)',borderColor:'#d97706',borderWidth:1.5,borderRadius:6}]},options:opts});
-const bc=['linear-gradient(90deg,#059669,#10b981)','linear-gradient(90deg,#3b82f6,#06b6d4)','linear-gradient(90deg,#d97706,#fb923c)','linear-gradient(90deg,#dc2626,#f87171)'];
-const pc=['#059669','#3b82f6','#d97706','#dc2626'];
-document.getElementById('progressSection').innerHTML=qs.map((q,i)=>{const r=cu[i]/TARGET*100;return '<div class="progress-row"><div class="progress-label">'+q+'</div><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:'+Math.min(100,r).toFixed(1)+'%;background:'+bc[i]+'">'+fmt(cu[i])+(cu[i]>TARGET?' ✓':'')+'</div></div><div class="progress-pct" style="color:'+pc[i]+'">'+r.toFixed(1)+'%</div></div>';}).join('');
-document.getElementById('achieveGrid').innerHTML=qs.map((q,i)=>'<div class="achieve-cell"><div class="aq">'+q+' 누적</div><div class="av" style="color:'+pc[i]+'">'+(cu[i]/TARGET*100).toFixed(1)+'%</div><div class="as">'+fmt(cu[i])+' / '+fmt(TARGET)+'</div></div>').join('');
-document.getElementById('gunGrid').innerHTML=Object.entries(GUN_CONFIG).map(([gun,cfg])=>{const gt=rows.filter(r=>r.gun===gun).reduce((a,b)=>a+b.dau,0);const gp=cfg.target?(gt/cfg.target*100).toFixed(1)+'%':'참고치';const bw=cfg.target?Math.min(100,gt/cfg.target*100).toFixed(1):70;const apps=[...new Set(rows.filter(r=>r.gun===gun).map(r=>r.app))].join(' · ');return '<div class="gun-card" style="--gc:'+cfg.color+'"><div class="gname">'+gun+'</div><div class="gval">'+fmt(gt)+'</div><div class="gsub">'+(cfg.target?'타겟 '+fmt(cfg.target):'별도 타겟 없음')+'</div><div class="gpct" style="'+(cfg.target?'':'font-size:15px;color:#94a3b8')+'">'+gp+'</div><div class="gun-bar-wrap"><div class="gun-bar-fill" style="width:'+bw+'%;'+(cfg.target?'':'opacity:0.4')+'"></div></div><div style="font-size:11px;color:var(--muted);margin-top:8px">'+(apps||'—')+'</div></div>';}).join('');
-const so=[...rows].sort((a,b)=>{const o={'1Q':1,'2Q':2,'3Q':3,'4Q':4};if(o[a.quarter]!==o[b.quarter])return o[a.quarter]-o[b.quarter];if(a.mgr==='silva'&&b.mgr!=='silva')return -1;if(b.mgr==='silva'&&a.mgr!=='silva')return 1;return b.dau-a.dau;});
-const qcls={'1Q':'q1','2Q':'q2','3Q':'q3','4Q':'q4'};
-document.getElementById('tableBody').innerHTML=so.map(d=>{const p=(d.dau/total*100).toFixed(1);return '<tr><td><span class="badge-q '+qcls[d.quarter]+'">'+d.quarter+'</span></td><td><span class="badge-mgr '+d.mgr+'">'+d.mgr+'</span></td><td><span class="badge-gun">'+d.gun+'</span></td><td style="font-weight:500;color:var(--text2)">'+d.app+'</td><td style="font-family:'Space Mono',monospace;font-weight:600">'+fmt(d.dau)+'</td><td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border)"><div style="width:'+p+'%;height:100%;background:'+(d.mgr==='silva'?'#7c3aed':'#d97706')+';border-radius:3px"></div></div><span style="font-size:11px;color:var(--muted);width:36px;text-align:right">'+p+'%</span></div></td></tr>';}).join('');}
-async function init(){const overlay=document.getElementById('loadingOverlay');const json=await loadData();if(!json||!json.data){overlay.classList.add('hidden');document.getElementById('errorBanner').classList.add('visible');return;}if(json.lastUpdated){const d=new Date(json.lastUpdated);document.getElementById('lastUpdated').textContent='업데이트: '+d.toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}const rows=parseRows(json.data);renderAll(rows);overlay.classList.add('hidden');}
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwd2cxxF4nSaDH1vhzz6bHMiafqVjYbErfK_E3ZZ3feqp3OO5MGvvflxxXEWVQ7C4t0/exec';
+const TARGET = 240000;
+const GUN_CONFIG = {
+  'A군': {color:'#059669', target:150000},
+  'B군': {color:'#3b82f6', target:40000},
+  'C군': {color:'#d97706', target:40000},
+  'D군': {color:'#dc2626', target:10000},
+  '침투군': {color:'#7c3aed', target:null}
+};
+let chartC = null, chartM = null;
+
+function fmt(n) { return Math.round(Number(n)).toLocaleString(); }
+
+async function loadData() {
+  try {
+    const r = await fetch(APPS_SCRIPT_URL);
+    const j = await r.json();
+    if (!j.success) throw new Error(j.error);
+    return j;
+  } catch(e) {
+    console.error(e);
+    return null;
+  }
+}
+
+function parseRows(raw) {
+  const rows = [];
+  for (const r of raw) {
+    const app = r['앱명(전체)'] || r['앱명'] || '';
+    const status = r['상태'] || '';
+    const adjDAU = parseFloat(r['조정 H.impDAU'] || 0);
+    const rawDAU = parseFloat(r['앱 DAU'] || 0);
+    const dau = Math.round(adjDAU || rawDAU);
+    const mgr = (r['담당자'] || '').toLowerCase().trim();
+    const gun = r['군'] || '';
+    if (!app || !dau) continue;
+    const m = status.match(/(\d+)Q/);
+    if (!m) continue;
+    rows.push({app, quarter: m[1]+'Q', mgr, gun, dau});
+  }
+  return rows;
+}
+
+function renderAll(rows) {
+  const total = rows.reduce((a, b) => a + b.dau, 0);
+  const sr = rows.filter(r => r.mgr === 'silva');
+  const vr = rows.filter(r => r.mgr === 'van');
+
+  document.getElementById('totalDAU').textContent = fmt(total);
+  document.getElementById('totalSub').textContent = rows.length + '개 매체사';
+  document.getElementById('silvaTotalDAU').textContent = fmt(sr.reduce((a, b) => a + b.dau, 0));
+  document.getElementById('silvaSub').textContent = sr.length + '개 매체사';
+  document.getElementById('vanTotalDAU').textContent = fmt(vr.reduce((a, b) => a + b.dau, 0));
+  document.getElementById('vanSub').textContent = vr.length + '개 매체사';
+  document.getElementById('achieveRate').textContent = total > 0 ? (total / TARGET * 100).toFixed(0) + '%' : '—';
+
+  const qs = ['1Q','2Q','3Q','4Q'];
+  const qc = {'1Q':'#059669','2Q':'#3b82f6','3Q':'#d97706','4Q':'#dc2626'};
+  const mx = Math.max(...rows.map(r => r.dau), 1);
+
+  document.getElementById('quarterGrid').innerHTML = qs.map(q => {
+    const qr = rows.filter(r => r.quarter === q);
+    const qt = qr.reduce((a, b) => a + b.dau, 0);
+    const sa = qr.filter(r => r.mgr === 'silva').sort((a, b) => b.dau - a.dau);
+    const va = qr.filter(r => r.mgr === 'van').sort((a, b) => b.dau - a.dau);
+    const mk = (arr, cls) => !arr.length
+      ? '<div class="no-data">예정 없음</div>'
+      : arr.map(r =>
+          '<div class="company-item">' +
+            '<div>' +
+              '<div class="company-name">' + r.app + '</div>' +
+              '<div class="dau-bar"><div class="dau-bar-fill" style="--bar-color:var(--' + cls + ');width:' + Math.max(2, r.dau / mx * 100).toFixed(0) + '%"></div></div>' +
+            '</div>' +
+            '<div class="company-dau">' + fmt(r.dau) + '</div>' +
+          '</div>'
+        ).join('');
+    return '<div class="quarter-col">' +
+      '<div class="quarter-header">' +
+        '<div class="qname" style="color:' + qc[q] + '">26&#39; ' + q + '</div>' +
+        '<div class="qtotal">합계: ' + fmt(qt) + '</div>' +
+      '</div>' +
+      '<div class="quarter-body">' +
+        '<div class="manager-section"><div class="manager-label silva">silva</div>' + mk(sa, 'silva') + '</div>' +
+        '<div class="manager-section"><div class="manager-label van">van</div>' + mk(va, 'van') + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  const qt = qs.map(q => rows.filter(r => r.quarter === q).reduce((a, b) => a + b.dau, 0));
+  const cu = qt.reduce((acc, v, i) => { acc.push((acc[i-1] || 0) + v); return acc; }, []);
+  const sp = qs.map(q => rows.filter(r => r.quarter === q && r.mgr === 'silva').reduce((a, b) => a + b.dau, 0));
+  const vp = qs.map(q => rows.filter(r => r.quarter === q && r.mgr === 'van').reduce((a, b) => a + b.dau, 0));
+
+  const opts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {labels: {color:'#475569', font:{size:11}, boxWidth:12}},
+      tooltip: {
+        backgroundColor:'#fff', borderColor:'#e2e8f0', borderWidth:1,
+        titleColor:'#0f172a', bodyColor:'#64748b',
+        callbacks: {label: c => c.dataset.label + ': ' + fmt(c.raw)}
+      }
+    },
+    scales: {
+      x: {grid:{color:'#f1f5f9'}, ticks:{color:'#94a3b8'}},
+      y: {grid:{color:'#f1f5f9'}, ticks:{color:'#94a3b8', callback: v => fmt(v)}}
+    }
+  };
+
+  if (chartC) chartC.destroy();
+  chartC = new Chart(document.getElementById('cumulativeChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: qs,
+      datasets: [
+        {label:'분기 신규', data:qt, backgroundColor:['rgba(5,150,105,0.5)','rgba(59,130,246,0.5)','rgba(217,119,6,0.4)','rgba(220,38,38,0.5)'], borderColor:['#059669','#3b82f6','#d97706','#dc2626'], borderWidth:1.5, borderRadius:6, order:2},
+        {label:'누적 H.impDAU', data:cu, type:'line', borderColor:'#059669', backgroundColor:'rgba(5,150,105,0.06)', borderWidth:2.5, pointRadius:5, pointBackgroundColor:'#059669', fill:true, tension:0.3, order:1},
+        {label:'타겟 (' + fmt(TARGET) + ')', data:[TARGET,TARGET,TARGET,TARGET], type:'line', borderColor:'rgba(220,38,38,0.6)', borderDash:[6,4], borderWidth:2, pointRadius:0, fill:false, order:0}
+      ]
+    },
+    options: opts
+  });
+
+  if (chartM) chartM.destroy();
+  chartM = new Chart(document.getElementById('managerChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: qs,
+      datasets: [
+        {label:'silva', data:sp, backgroundColor:'rgba(124,58,237,0.5)', borderColor:'#7c3aed', borderWidth:1.5, borderRadius:6},
+        {label:'van', data:vp, backgroundColor:'rgba(217,119,6,0.5)', borderColor:'#d97706', borderWidth:1.5, borderRadius:6}
+      ]
+    },
+    options: opts
+  });
+
+  const bc = ['linear-gradient(90deg,#059669,#10b981)','linear-gradient(90deg,#3b82f6,#06b6d4)','linear-gradient(90deg,#d97706,#fb923c)','linear-gradient(90deg,#dc2626,#f87171)'];
+  const pc = ['#059669','#3b82f6','#d97706','#dc2626'];
+
+  document.getElementById('progressSection').innerHTML = qs.map((q, i) => {
+    const pct = cu[i] / TARGET * 100;
+    return '<div class="progress-row">' +
+      '<div class="progress-label">' + q + '</div>' +
+      '<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:' + Math.min(100, pct).toFixed(1) + '%;background:' + bc[i] + '">' + fmt(cu[i]) + (cu[i] > TARGET ? ' ✓' : '') + '</div></div>' +
+      '<div class="progress-pct" style="color:' + pc[i] + '">' + pct.toFixed(1) + '%</div>' +
+    '</div>';
+  }).join('');
+
+  document.getElementById('achieveGrid').innerHTML = qs.map((q, i) =>
+    '<div class="achieve-cell">' +
+      '<div class="aq">' + q + ' 누적</div>' +
+      '<div class="av" style="color:' + pc[i] + '">' + (cu[i] / TARGET * 100).toFixed(1) + '%</div>' +
+      '<div class="as">' + fmt(cu[i]) + ' / ' + fmt(TARGET) + '</div>' +
+    '</div>'
+  ).join('');
+
+  document.getElementById('gunGrid').innerHTML = Object.entries(GUN_CONFIG).map(([gun, cfg]) => {
+    const gt = rows.filter(r => r.gun === gun).reduce((a, b) => a + b.dau, 0);
+    const gp = cfg.target ? (gt / cfg.target * 100).toFixed(1) + '%' : '참고치';
+    const bw = cfg.target ? Math.min(100, gt / cfg.target * 100).toFixed(1) : 70;
+    const apps = [...new Set(rows.filter(r => r.gun === gun).map(r => r.app))].join(' · ');
+    return '<div class="gun-card" style="--gc:' + cfg.color + '">' +
+      '<div class="gname">' + gun + '</div>' +
+      '<div class="gval">' + fmt(gt) + '</div>' +
+      '<div class="gsub">' + (cfg.target ? '타겟 ' + fmt(cfg.target) : '별도 타겟 없음') + '</div>' +
+      '<div class="gpct" style="' + (cfg.target ? '' : 'font-size:15px;color:#94a3b8') + '">' + gp + '</div>' +
+      '<div class="gun-bar-wrap"><div class="gun-bar-fill" style="width:' + bw + '%;' + (cfg.target ? '' : 'opacity:0.4') + '"></div></div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:8px">' + (apps || '—') + '</div>' +
+    '</div>';
+  }).join('');
+
+  const so = [...rows].sort((a, b) => {
+    const o = {'1Q':1,'2Q':2,'3Q':3,'4Q':4};
+    if (o[a.quarter] !== o[b.quarter]) return o[a.quarter] - o[b.quarter];
+    if (a.mgr === 'silva' && b.mgr !== 'silva') return -1;
+    if (b.mgr === 'silva' && a.mgr !== 'silva') return 1;
+    return b.dau - a.dau;
+  });
+  const qcls = {'1Q':'q1','2Q':'q2','3Q':'q3','4Q':'q4'};
+
+  document.getElementById('tableBody').innerHTML = so.map(d => {
+    const p = (d.dau / total * 100).toFixed(1);
+    return '<tr>' +
+      '<td><span class="badge-q ' + qcls[d.quarter] + '">' + d.quarter + '</span></td>' +
+      '<td><span class="badge-mgr ' + d.mgr + '">' + d.mgr + '</span></td>' +
+      '<td><span class="badge-gun">' + d.gun + '</span></td>' +
+      '<td style="font-weight:500;color:var(--text2)">' + d.app + '</td>' +
+      '<td style="font-family:\'Space Mono\',monospace;font-weight:600">' + fmt(d.dau) + '</td>' +
+      '<td><div style="display:flex;align-items:center;gap:8px">' +
+        '<div style="flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border)">' +
+          '<div style="width:' + p + '%;height:100%;background:' + (d.mgr === 'silva' ? '#7c3aed' : '#d97706') + ';border-radius:3px"></div>' +
+        '</div>' +
+        '<span style="font-size:11px;color:var(--muted);width:36px;text-align:right">' + p + '%</span>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+async function init() {
+  const overlay = document.getElementById('loadingOverlay');
+  const json = await loadData();
+  if (!json || !json.data) {
+    overlay.classList.add('hidden');
+    document.getElementById('errorBanner').classList.add('visible');
+    return;
+  }
+  if (json.lastUpdated) {
+    const d = new Date(json.lastUpdated);
+    document.getElementById('lastUpdated').textContent = '업데이트: ' + d.toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
+  }
+  const rows = parseRows(json.data);
+  renderAll(rows);
+  overlay.classList.add('hidden');
+}
+
 init();
 </script>
 </body>
