@@ -139,7 +139,7 @@ const GUN_CONFIG={'A군':{color:'#059669',target:150000},'B군':{color:'#3b82f6'
 let chartC=null,chartM=null;
 function fmt(n){return Number(n).toLocaleString();}
 async function loadData(){try{const r=await fetch(APPS_SCRIPT_URL);const j=await r.json();if(!j.success)throw new Error(j.error);return j;}catch(e){console.error(e);return null;}}
-function parseRows(raw){const rows=[];for(const r of raw){const app=r['앱명(전체)']||r['앱명']||'';const status=r['상태']||'';const adjDAU=parseFloat(r['조정 H.impDAU']||0);const rawDAU=parseFloat(r['앱 DAU']||0);const dau=adjDAU||rawDAU;const mgr=(r['담당자']||'').toLowerCase().trim();const gun=r['군']||'';if(!app||!dau)continue;const m=status.match(/(\d+)Q/);if(!m)continue;rows.push({app,quarter:m[1]+'Q',mgr,gun,dau});}return rows;}
+function parseRows(raw){const rows=[];for(const r of raw){const app=r['앱명(전체)']||r['앱명']||'';const status=r['상태']||'';const adjDAU=parseFloat(r['조정 H.impDAU']||0);const rawDAU=parseFloat(r['앱 DAU']||0);const dau = Math.round(adjDAU || rawDAU);const mgr=(r['담당자']||'').toLowerCase().trim();const gun=r['군']||'';if(!app||!dau)continue;const m=status.match(/(\d+)Q/);if(!m)continue;rows.push({app,quarter:m[1]+'Q',mgr,gun,dau});}return rows;}
 function renderAll(rows){
 const total=rows.reduce((a,b)=>a+b.dau,0);
 const sr=rows.filter(r=>r.mgr==='silva');const vr=rows.filter(r=>r.mgr==='van');
